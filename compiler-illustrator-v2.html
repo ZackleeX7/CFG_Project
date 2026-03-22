@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Compiler Illustrator</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Bebas+Neue&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#0a0a0f;
+  --paper:#f0ede6;
+  --paper2:#e8e4dc;
+  --paper3:#ddd9d0;
+  --line:#2a2a3a;
+  --line2:#4a4a5a;
+  --line3:#9a9aaa;
+  --accent:#ff3d00;
+  --accent2:#cc2200;
+  --blue:#0040ff;
+  --green:#00aa44;
+  --amber:#cc8800;
+  --mono:'Space Mono',monospace;
+  --display:'Bebas Neue',sans-serif;
+  --body:'Inter',sans-serif;
+}
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--mono);background:var(--paper);color:var(--ink);display:flex;flex-direction:column}
+
+/* SCANLINE TEXTURE */
+body::before{
+  content:'';position:fixed;inset:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.015) 2px,rgba(0,0,0,0.015) 4px);
+  pointer-events:none;z-index:9999
+}
+
+/* HEADER */
+.hdr{
+  display:flex;align-items:stretch;
+  border-bottom:2px solid var(--ink);
+  background:var(--ink);
+  flex-shrink:0;
+  height:56px;
+}
+.hdr-logo{
+  display:flex;align-items:center;gap:12px;
+  padding:0 24px;
+  border-right:2px solid var(--line2);
+}
+.hdr-logo-mark{
+  width:32px;height:32px;
+  border:2px solid var(--accent);
+  display:flex;align-items:center;justify-content:center;
+  position:relative;
+}
+.hdr-logo-mark::after{
+  content:'';position:absolute;
+  width:16px;height:16px;
+  border:2px solid var(--accent);
+  transform:rotate(45deg);
+}
+.hdr-title{font-family:var(--display);font-size:26px;color:#f0ede6;letter-spacing:2px}
+.hdr-sub{font-size:9px;color:#666;letter-spacing:3px;text-transform:uppercase;font-family:var(--body)}
+.hdr-nav{display:flex;flex:1}
+.hdr-tab{
+  display:flex;align-items:center;gap:10px;
+  padding:0 24px;
+  font-size:11px;letter-spacing:2px;text-transform:uppercase;
+  color:#666;cursor:pointer;
+  border-right:1px solid var(--line2);
+  transition:all 0.15s;
+  position:relative;
+}
+.hdr-tab:hover{color:#f0ede6;background:rgba(255,255,255,0.05)}
+.hdr-tab.on{color:#f0ede6;background:rgba(255,255,255,0.06)}
+.hdr-tab.on::after{
+  content:'';position:absolute;bottom:0;left:0;right:0;height:2px;
+  background:var(--accent);
+}
+.hdr-tab-n{
+  width:18px;height:18px;border-radius:50%;
+  background:var(--accent);
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;color:#fff;font-weight:700;font-family:var(--body);
+}
+.hdr-tab.on .hdr-tab-n{background:var(--accent)}
+.hdr-badge{
+  margin-left:auto;display:flex;align-items:center;
+  padding:0 20px;
+  font-size:10px;color:#444;letter-spacing:1px;font-family:var(--body);
+  border-left:1px solid var(--line2);
+}
+.hdr-badge span{color:var(--accent)}
+
+/* MAIN */
+.main{flex:1;overflow:hidden;display:flex}
+.page{display:none;width:100%;height:100%}
+.page.on{display:flex}
+
+/* GRID LINES DECORATION */
+.gridlines{
+  position:absolute;inset:0;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(0,0,0,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,0,0,0.04) 1px, transparent 1px);
+  background-size:40px 40px;
+}
+
+/* COLUMNS */
+.col{overflow-y:auto;height:100%;position:relative}
+.col::-webkit-scrollbar{width:4px}
+.col::-webkit-scrollbar-thumb{background:var(--line3)}
+.col-left{width:280px;border-right:2px solid var(--ink);background:var(--paper2);flex-shrink:0}
+.col-main{flex:1;background:var(--paper);position:relative}
+.col-right{width:300px;border-left:2px solid var(--ink);background:var(--paper2);flex-shrink:0}
+
+/* BLOCK TITLES */
+.blk{border-bottom:1px solid var(--line);padding:16px 20px}
+.blk-title{
+  font-size:9px;letter-spacing:3px;text-transform:uppercase;
+  color:var(--line3);font-family:var(--body);font-weight:500;
+  display:flex;align-items:center;gap:8px;margin-bottom:12px;
+}
+.blk-title::before{content:'//';color:var(--accent);font-family:var(--mono)}
+
+/* FORM */
+.field{margin-bottom:14px}
+.field label{display:block;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--line2);margin-bottom:5px;font-family:var(--body)}
+.field input[type=text],.field textarea,.field select{
+  width:100%;background:var(--paper);
+  border:1px solid var(--line);
+  padding:8px 10px;
+  font-family:var(--mono);font-size:11px;color:var(--ink);
+  outline:none;transition:border-color 0.1s;
+  resize:vertical;
+}
+.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--accent)}
+.field textarea{line-height:1.7}
+
+/* PRESET ITEMS */
+.preset{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 14px;
+  border:1px solid var(--line);
+  margin-bottom:6px;
+  cursor:pointer;background:var(--paper);
+  transition:all 0.12s;font-size:11px;
+}
+.preset:hover{border-color:var(--accent);background:var(--paper2)}
+.preset.active{border-color:var(--accent);border-left:3px solid var(--accent)}
+.preset-num{font-family:var(--display);font-size:20px;color:var(--line3);line-height:1;min-width:24px}
+.preset.active .preset-num{color:var(--accent)}
+.preset-name{font-size:10px;letter-spacing:0.5px}
+
+/* STAT GRID */
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--ink);border:1px solid var(--ink);margin-bottom:16px}
+.stat{background:var(--paper);padding:12px 14px}
+.stat-val{font-family:var(--display);font-size:32px;color:var(--ink);line-height:1}
+.stat-lbl{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--line3);font-family:var(--body);margin-top:2px}
+
+/* BUTTONS */
+.btn{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:10px 18px;
+  font-family:var(--mono);font-size:11px;letter-spacing:1px;
+  cursor:pointer;border:2px solid var(--ink);
+  background:transparent;color:var(--ink);
+  transition:all 0.12s;text-transform:uppercase;
+}
+.btn:hover{background:var(--ink);color:var(--paper)}
+.btn-accent{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn-accent:hover{background:var(--accent2);border-color:var(--accent2);color:#fff}
+.btn-full{width:100%;justify-content:center}
+.btn-sm{padding:6px 12px;font-size:10px}
+
+/* GRAMMAR DISPLAY */
+.gram-box{
+  background:var(--ink);color:var(--paper);
+  font-family:var(--mono);font-size:12px;
+  padding:16px;line-height:1.9;
+  border:2px solid var(--ink);
+}
+.gram-lhs{color:#ff8a65}
+.gram-arrow{color:#666}
+.gram-nt{color:#82aaff}
+.gram-t{color:#c3e88d}
+.gram-pipe{color:#ffcb6b}
+.gram-eps{color:#c792ea}
+.gram-num{color:#444;margin-right:8px;font-size:10px;user-select:none}
+
+/* CODE INPUT */
+.code-wrap{
+  border:2px solid var(--ink);
+  background:var(--ink);
+  overflow:hidden;
+}
+.code-header{
+  background:#111;
+  padding:8px 14px;
+  display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid #333;
+}
+.code-dots{display:flex;gap:6px}
+.dot{width:10px;height:10px;border-radius:50%}
+.dot-r{background:#ff5f57}.dot-y{background:#ffbd2e}.dot-g{background:#28c840}
+.code-fname{font-size:10px;color:#555;letter-spacing:1px}
+textarea#codeInput{
+  width:100%;background:#111;border:none;
+  padding:16px;color:#e2e4f0;
+  font-family:var(--mono);font-size:13px;
+  line-height:1.7;min-height:110px;outline:none;resize:none;
+}
+
+/* STATUS */
+.status{
+  display:none;
+  border:2px solid var(--ink);
+  padding:14px 18px;
+  display:flex;align-items:center;gap:14px;
+  font-size:12px;letter-spacing:1px;font-family:var(--mono);
+  margin-bottom:16px;
+}
+.status-ok{background:#00aa44;color:#fff;border-color:#007733;display:flex}
+.status-err{background:var(--accent);color:#fff;border-color:var(--accent2);display:flex}
+.status-idle{background:var(--paper2);color:var(--line2);border-color:var(--line);display:none}
+.status-big{font-family:var(--display);font-size:28px;line-height:1}
+
+/* TOKEN ROW */
+.tok-row{
+  display:flex;align-items:center;gap:8px;
+  padding:5px 0;border-bottom:1px solid var(--paper3);
+  font-size:11px;font-family:var(--mono);
+}
+.tok-tag{
+  padding:2px 7px;font-size:9px;letter-spacing:1px;
+  text-transform:uppercase;border:1px solid;
+  min-width:48px;text-align:center;font-family:var(--body);
+}
+.tok-NUM{border-color:#cc8800;color:#cc8800}
+.tok-ID{border-color:var(--blue);color:var(--blue)}
+.tok-KEYWORD{border-color:#8800cc;color:#8800cc}
+.tok-OP{border-color:var(--green);color:var(--green)}
+.tok-PAREN{border-color:var(--line2);color:var(--line2)}
+.tok-ERR{border-color:var(--accent);color:var(--accent)}
+.tok-val{color:var(--line2);flex:1}
+
+/* TRACE */
+.trace-item{
+  display:flex;gap:8px;align-items:flex-start;
+  padding:7px 10px;
+  border:1px solid var(--paper3);
+  margin-bottom:4px;font-size:11px;
+  background:var(--paper);
+}
+.trace-n{color:var(--line3);min-width:20px;font-size:10px;padding-top:1px}
+.trace-rule{color:var(--ink);flex:1;font-family:var(--mono)}
+.trace-rule .nt{color:var(--blue);font-weight:700}
+.trace-rule .t{color:var(--green)}
+
+/* PARSE TREE */
+.tree-box{
+  border:2px solid var(--ink);
+  background:var(--paper);
+  overflow:auto;
+  min-height:200px;
+}
+.tree-nt{fill:#dde8ff;stroke:#0040ff;stroke-width:1.5}
+.tree-t{fill:#d8f5e0;stroke:#00aa44;stroke-width:1.5}
+.tree-lbl{font-family:'Space Mono',monospace;font-size:11px;fill:#0a0a0f}
+.tree-lbl-t{fill:#006622}
+.tree-edge{stroke:#aaa;stroke-width:1}
+
+/* CHECKLIST */
+.check-item{
+  display:flex;align-items:center;gap:10px;
+  padding:8px 0;border-bottom:1px solid var(--paper3);
+  font-size:11px;
+}
+.check-icon{
+  width:18px;height:18px;border:2px solid var(--line3);
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;flex-shrink:0;
+}
+.check-ok .check-icon{background:var(--green);border-color:var(--green);color:#fff}
+.check-fail .check-icon{background:var(--accent);border-color:var(--accent);color:#fff}
+
+/* EXAMPLE */
+.ex-item{
+  padding:9px 12px;border:1px solid var(--line);
+  margin-bottom:5px;cursor:pointer;font-family:var(--mono);font-size:11px;
+  display:flex;align-items:center;gap:10px;
+  transition:border-color 0.1s;
+}
+.ex-item:hover{border-color:var(--accent)}
+.ex-badge{
+  font-size:8px;letter-spacing:1px;text-transform:uppercase;
+  padding:2px 7px;font-family:var(--body);font-weight:500;
+  white-space:nowrap;
+}
+.ex-v{background:#d8f5e0;color:#006622;border:1px solid #aaddbb}
+.ex-i{background:#ffe0dc;color:#aa1100;border:1px solid #ffb0a0}
+
+/* SECTION LABEL VERTICAL */
+.v-label{
+  writing-mode:vertical-rl;text-orientation:mixed;
+  transform:rotate(180deg);
+  font-family:var(--display);font-size:11px;letter-spacing:4px;
+  color:var(--line3);padding:16px 8px;
+  border-right:1px solid var(--line);
+  user-select:none;
+}
+
+/* PAGE 1 HERO */
+.hero-area{
+  padding:32px 36px;
+  border-bottom:2px solid var(--ink);
+  position:relative;overflow:hidden;
+}
+.hero-area::before{
+  content:'CFG';
+  font-family:var(--display);font-size:160px;
+  color:rgba(0,0,0,0.04);
+  position:absolute;right:-10px;bottom:-20px;line-height:1;
+  pointer-events:none;
+}
+.hero-h{font-family:var(--display);font-size:48px;letter-spacing:2px;line-height:1;color:var(--ink)}
+.hero-sub{font-size:11px;color:var(--line3);letter-spacing:2px;text-transform:uppercase;margin-top:6px;font-family:var(--body)}
+
+/* GRAMMAR PAGE */
+.gram-editor-wrap{padding:20px 24px}
+.gram-title-row{
+  display:flex;align-items:baseline;gap:16px;margin-bottom:16px;
+  padding-bottom:16px;border-bottom:2px solid var(--ink);
+}
+.gram-main-title{font-family:var(--display);font-size:36px;letter-spacing:2px}
+.gram-sub{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--line3);font-family:var(--body)}
+
+/* PARSER PAGE */
+.parse-title-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 20px;border-bottom:2px solid var(--ink);
+}
+.parse-title{font-family:var(--display);font-size:32px;letter-spacing:2px}
+
+/* NOTATION TABLE */
+.nota{width:100%;font-size:10px;font-family:var(--mono)}
+.nota td{padding:4px 6px;border-bottom:1px solid var(--paper3)}
+.nota td:first-child{color:var(--line3);font-family:var(--body);letter-spacing:1px;font-size:9px;text-transform:uppercase}
+
+@media(max-width:900px){
+  .col-right{display:none}
+  .col-left{width:240px}
+}
+@media(max-width:640px){
+  .col-left{display:none}
+  .hdr-tab span{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="hdr">
+  <div class="hdr-logo">
+    <div class="hdr-logo-mark"></div>
+    <div>
+      <div class="hdr-title">COMPILER ILSTR</div>
+      <div class="hdr-sub">Language Design Tool</div>
+    </div>
+  </div>
+  <div class="hdr-nav">
+    <div class="hdr-tab on" data-tab="define" onclick="go('define')">
+      <div class="hdr-tab-n">1</div><span>Define</span>
+    </div>
+    <div class="hdr-tab" data-tab="grammar" onclick="go('grammar')">
+      <div class="hdr-tab-n">2</div><span>Grammar</span>
+    </div>
+    <div class="hdr-tab" data-tab="parse" onclick="go('parse')">
+      <div class="hdr-tab-n">3</div><span>Parser</span>
+    </div>
+  </div>
+  <div class="hdr-badge">LANG: <span id="hdrLang">ARITHMETIC</span></div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+<!-- ======== PAGE 1: DEFINE ======== -->
+<div id="p-define" class="page on">
+  <div class="col col-left">
+    <div class="blk">
+      <div class="blk-title">Presets</div>
+      <div id="presetList">
+        <div class="preset active" onclick="loadPreset('arithmetic')"><span class="preset-num">01</span><div><div style="font-size:9px;color:var(--line3);text-transform:uppercase;letter-spacing:1px">Arithmetic</div><div class="preset-name">Expression Language</div></div></div>
+        <div class="preset" onclick="loadPreset('assignment')"><span class="preset-num">02</span><div><div style="font-size:9px;color:var(--line3);text-transform:uppercase;letter-spacing:1px">Assignment</div><div class="preset-name">Variable Language</div></div></div>
+        <div class="preset" onclick="loadPreset('boolean')"><span class="preset-num">03</span><div><div style="font-size:9px;color:var(--line3);text-transform:uppercase;letter-spacing:1px">Boolean</div><div class="preset-name">Logic Language</div></div></div>
+        <div class="preset" onclick="loadPreset('conditional')"><span class="preset-num">04</span><div><div style="font-size:9px;color:var(--line3);text-transform:uppercase;letter-spacing:1px">Conditional</div><div class="preset-name">If-Else Language</div></div></div>
+      </div>
+    </div>
+    <div class="blk">
+      <div class="blk-title">Spec Checklist</div>
+      <div id="checklist">
+        <div class="check-item check-ok" id="chk-nt"><div class="check-icon">✓</div><span>Min. 3 non-terminals</span></div>
+        <div class="check-item check-ok" id="chk-prod"><div class="check-icon">✓</div><span>Min. 5 productions</span></div>
+        <div class="check-item check-ok" id="chk-ops"><div class="check-icon">✓</div><span>Min. 2 operators</span></div>
+        <div class="check-item check-ok" id="chk-ex"><div class="check-icon">✓</div><span>Valid + invalid samples</span></div>
+      </div>
+    </div>
+    <div class="blk">
+      <div class="blk-title">Formal Def.</div>
+      <div style="font-family:var(--mono);font-size:11px;color:var(--line2);line-height:2">
+        <div>G = (V, Σ, R, S)</div>
+        <div style="color:var(--line3);font-size:10px">V = non-terminals</div>
+        <div style="color:var(--line3);font-size:10px">Σ = terminals</div>
+        <div style="color:var(--line3);font-size:10px">R = production rules</div>
+        <div style="color:var(--line3);font-size:10px">S = start symbol</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col col-main">
+    <div class="hero-area">
+      <div class="hero-h">DEFINE LANGUAGE</div>
+      <div class="hero-sub">Step 01 of 03 — Language Properties</div>
+    </div>
+    <div style="padding:24px 36px;display:grid;grid-template-columns:1fr 1fr;gap:24px">
+      <div>
+        <div class="field"><label>Language Name</label><input type="text" id="langName" value="Arithmetic Expression Language" oninput="updHeader()"></div>
+        <div class="field"><label>Language Type</label>
+          <select id="langType" onchange="loadPresetByType()">
+            <option value="arithmetic">Arithmetic Expression</option>
+            <option value="assignment">Assignment Language</option>
+            <option value="boolean">Boolean Expression</option>
+            <option value="conditional">Simple Conditional</option>
+          </select>
+        </div>
+        <div class="field"><label>Operators (comma separated)</label><input type="text" id="langOps" value="+, -, *, /"></div>
+        <div class="field"><label>Description</label><textarea id="langDesc" rows="3">Arithmetic expressions with +, -, *, / operators, parentheses, and integer literals.</textarea></div>
+      </div>
+      <div>
+        <div class="stats" id="statsGrid">
+          <div class="stat"><div class="stat-val" id="sNT">4</div><div class="stat-lbl">Non-terminals</div></div>
+          <div class="stat"><div class="stat-val" id="sProd">7</div><div class="stat-lbl">Productions</div></div>
+          <div class="stat"><div class="stat-val" id="sT">8</div><div class="stat-lbl">Terminals</div></div>
+          <div class="stat"><div class="stat-val" id="sOps">4</div><div class="stat-lbl">Operators</div></div>
+        </div>
+        <div class="field"><label>Non-terminals</label><input type="text" id="langNTs" value="E, T, F, N"></div>
+        <div class="field"><label>Start Symbol</label><input type="text" id="langStart" value="E"></div>
+        <div class="field"><label>Sample — Valid Input</label><input type="text" id="smplV" value="3 + 4 * 2"></div>
+        <div class="field"><label>Sample — Invalid Input</label><input type="text" id="smplI" value="3 + * 2"></div>
+      </div>
+    </div>
+    <div style="padding:0 36px 24px;display:flex;gap:10px">
+      <button class="btn btn-accent" onclick="genGrammar()">Generate Grammar →</button>
+      <button class="btn" onclick="go('grammar')">View Grammar</button>
+    </div>
+  </div>
+
+  <div class="col col-right">
+    <div class="blk">
+      <div class="blk-title">G = (V, Σ, R, S)</div>
+      <div style="margin-bottom:8px">
+        <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--line3);font-family:var(--body);margin-bottom:6px">V — Non-terminals</div>
+        <div id="ntPills" style="display:flex;flex-wrap:wrap;gap:4px"></div>
+      </div>
+      <div style="margin-top:12px">
+        <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--line3);font-family:var(--body);margin-bottom:6px">Σ — Terminals</div>
+        <div id="tPills" style="display:flex;flex-wrap:wrap;gap:4px"></div>
+      </div>
+    </div>
+    <div class="blk">
+      <div class="blk-title">What is CFG?</div>
+      <p style="font-size:11px;color:var(--line2);line-height:1.8">A Context-Free Grammar defines a language via <span style="color:var(--blue)">production rules</span>. Each rule maps a <span style="color:#ff8a65">non-terminal</span> to a sequence of <span style="color:#c3e88d">terminals</span> and non-terminals.</p>
+    </div>
+    <div class="blk">
+      <div class="blk-title">Language Types</div>
+      <table class="nota">
+        <tr><td>Arithmetic</td><td style="color:var(--ink)">Expressions w/ math ops</td></tr>
+        <tr><td>Assignment</td><td style="color:var(--ink)">Variable binding</td></tr>
+        <tr><td>Boolean</td><td style="color:var(--ink)">Logical predicates</td></tr>
+        <tr><td>Conditional</td><td style="color:var(--ink)">if/then/else flow</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ======== PAGE 2: GRAMMAR ======== -->
+<div id="p-grammar" class="page">
+  <div class="col col-left">
+    <div class="blk">
+      <div class="blk-title">Metrics</div>
+      <div class="stats">
+        <div class="stat"><div class="stat-val" id="gNT">4</div><div class="stat-lbl">Non-terminals</div></div>
+        <div class="stat"><div class="stat-val" id="gProd">7</div><div class="stat-lbl">Productions</div></div>
+      </div>
+      <div class="stats" style="margin-bottom:0">
+        <div class="stat"><div class="stat-val" id="gStart" style="font-size:24px">E</div><div class="stat-lbl">Start</div></div>
+        <div class="stat"><div class="stat-val" style="font-size:16px;padding-top:6px;color:var(--amber)">Left-Rec</div><div class="stat-lbl">Type</div></div>
+      </div>
+    </div>
+    <div class="blk">
+      <div class="blk-title">Notation</div>
+      <table class="nota">
+        <tr><td>NT</td><td style="color:#82aaff">uppercase symbol</td></tr>
+        <tr><td>Terminal</td><td style="color:#c3e88d">lowercase / lit</td></tr>
+        <tr><td>→</td><td style="color:var(--ink)">derives</td></tr>
+        <tr><td>|</td><td style="color:#ffcb6b">alternative</td></tr>
+        <tr><td>ε</td><td style="color:#c792ea">empty string</td></tr>
+      </table>
+    </div>
+    <div class="blk">
+      <div class="blk-title">Actions</div>
+      <button class="btn btn-full btn-sm" style="margin-bottom:6px" onclick="reformatGram()">Reformat rules</button>
+      <button class="btn btn-full btn-sm" onclick="applyGram()">Apply changes</button>
+    </div>
+    <div class="blk">
+      <div class="blk-title">First Sets</div>
+      <div id="firstSets" style="font-family:var(--mono);font-size:11px;line-height:2;color:var(--line2)"></div>
+    </div>
+  </div>
+
+  <div class="col col-main">
+    <div class="gram-editor-wrap">
+      <div class="gram-title-row">
+        <div class="gram-main-title">CONTEXT-FREE GRAMMAR</div>
+        <div class="gram-sub">Edit · Reformat · Apply</div>
+        <button class="btn btn-accent btn-sm" onclick="applyGram();go('parse');testSample()" style="margin-left:auto">Test Input →</button>
+      </div>
+
+      <div class="field" style="margin-bottom:16px">
+        <label>Raw Grammar Text — Editable</label>
+        <textarea id="gramText" rows="10">E → E + T | E - T | T
+T → T * F | T / F | F
+F → ( E ) | N
+N → 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | id</textarea>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+        <div style="font-size:9px;letter-spacing:3px;text-transform:uppercase;font-family:var(--body);color:var(--line3)">Rendered Grammar</div>
+        <div style="flex:1;border-top:1px solid var(--line3)"></div>
+        <div id="prodCount" style="font-size:10px;color:var(--line3);font-family:var(--body)">7 rules</div>
+      </div>
+      <div class="gram-box" id="renderedGram"></div>
+    </div>
+  </div>
+
+  <div class="col col-right">
+    <div class="blk">
+      <div class="blk-title">Non-terminals (V)</div>
+      <div id="gNtPills" style="display:flex;flex-wrap:wrap;gap:4px"></div>
+    </div>
+    <div class="blk">
+      <div class="blk-title">Terminals (Σ)</div>
+      <div id="gTPills" style="display:flex;flex-wrap:wrap;gap:4px"></div>
+    </div>
+    <div class="blk">
+      <div class="blk-title">Grammar Guide</div>
+      <p style="font-size:11px;color:var(--line2);line-height:1.8;margin-bottom:8px">Each line is one <span style="color:#ff8a65">production rule</span>. Use <code style="background:var(--paper3);padding:1px 4px;font-size:10px">|</code> to separate alternatives.</p>
+      <p style="font-size:11px;color:var(--line2);line-height:1.8">Left-recursive grammars like <code style="background:var(--paper3);padding:1px 4px;font-size:10px">E → E + T</code> are parsed with iterative loops in the recursive-descent parser.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ======== PAGE 3: PARSE ======== -->
+<div id="p-parse" class="page">
+  <div class="col col-left" style="width:260px">
+    <div class="blk">
+      <div class="blk-title">Examples</div>
+      <div id="exList"></div>
+    </div>
+    <div class="blk">
+      <div class="blk-title">Tokens</div>
+      <div id="tokList" style="max-height:280px;overflow-y:auto"></div>
+    </div>
+  </div>
+
+  <div class="col col-main">
+    <div class="parse-title-row">
+      <div class="parse-title">PARSE &amp; TEST</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-sm" onclick="clearAll()">Clear</button>
+        <button class="btn btn-accent btn-sm" onclick="runParse()">▶ Run Parser</button>
+      </div>
+    </div>
+
+    <div style="padding:16px 20px">
+      <div class="code-wrap" style="margin-bottom:14px">
+        <div class="code-header">
+          <div class="code-dots"><div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div></div>
+          <div class="code-fname">input.lang</div>
+          <div style="font-size:9px;color:#444;letter-spacing:1px;font-family:var(--body)" id="cursorPos">0 chars</div>
+        </div>
+        <textarea id="codeInput" placeholder="Type or click an example →&#10;&#10;e.g.  3 + 4 * 2" spellcheck="false" oninput="updCursor()"></textarea>
+      </div>
+
+      <div id="statusWrap" style="display:none;margin-bottom:14px">
+        <div id="statusBox" class="status">
+          <div id="statusBig" class="status-big">VALID</div>
+          <div>
+            <div id="statusTxt" style="font-size:12px;letter-spacing:1px"></div>
+            <div id="statusSub" style="font-size:10px;opacity:0.7;margin-top:2px;font-family:var(--body)"></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+        <div style="font-size:9px;letter-spacing:3px;text-transform:uppercase;font-family:var(--body);color:var(--line3)">Parse Tree</div>
+        <div style="flex:1;border-top:1px solid var(--line3)"></div>
+        <div style="font-size:9px;color:var(--line3);font-family:var(--body)">SVG · interactive</div>
+      </div>
+      <div class="tree-box">
+        <svg id="treeSvg" style="display:block;min-width:100%" viewBox="0 0 600 180">
+          <text x="300" y="95" text-anchor="middle" font-family="Space Mono,monospace" font-size="12" fill="#aaa">run the parser to generate tree</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="col col-right">
+    <div class="blk">
+      <div class="blk-title">Derivation Trace</div>
+      <div id="traceList" style="max-height:320px;overflow-y:auto">
+        <p style="font-size:11px;color:var(--line3)">No trace yet.</p>
+      </div>
+    </div>
+    <div class="blk">
+      <div class="blk-title">Error Details</div>
+      <div id="errDiv"><p style="font-size:11px;color:var(--line3)">No errors.</p></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- end main -->
+
+<script>
+const PRESETS={
+  arithmetic:{
+    name:'Arithmetic Expression Language',type:'arithmetic',ops:'+, -, *, /',
+    desc:'Arithmetic expressions with +, -, *, / operators, parentheses, and integer literals.',
+    nts:'E, T, F, N',start:'E',
+    gram:`E → E + T | E - T | T\nT → T * F | T / F | F\nF → ( E ) | N\nN → 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | id`,
+    sv:'3 + 4 * 2',si:'3 + * 2',
+    ex:[{t:'( 1 + 2 ) * 3',v:1},{t:'5 - id + 3',v:1},{t:'10 / 2',v:1},{t:'* 3 + 1',v:0},{t:'3 + + 2',v:0},{t:'( 1 + 2',v:0}]
+  },
+  assignment:{
+    name:'Assignment Language',type:'assignment',ops:'=, +, -, *',
+    desc:'Variable assignment with arithmetic expressions on the right-hand side.',
+    nts:'S, E, T, F',start:'S',
+    gram:`S → id = E\nE → E + T | E - T | T\nT → T * F | F\nF → ( E ) | id | num`,
+    sv:'x = 3 + 4',si:'= 3 + 4',
+    ex:[{t:'x = id + num',v:1},{t:'y = ( num + num ) * id',v:1},{t:'= 5',v:0},{t:'x y = 3',v:0}]
+  },
+  boolean:{
+    name:'Boolean Expression Language',type:'boolean',ops:'and, or, not',
+    desc:'Boolean expressions using and, or, not operators and parentheses.',
+    nts:'B, C, L',start:'B',
+    gram:`B → B or C | C\nC → C and L | L\nL → not L | ( B ) | true | false | id`,
+    sv:'true and false',si:'and true false',
+    ex:[{t:'true or false',v:1},{t:'not true and false',v:1},{t:'( true or id ) and not false',v:1},{t:'true and and false',v:0},{t:'or true',v:0}]
+  },
+  conditional:{
+    name:'Simple Conditional Language',type:'conditional',ops:'if, else, ==, !=',
+    desc:'Simple if-else conditional statements with comparison operators.',
+    nts:'S, C, E, V',start:'S',
+    gram:`S → if C then S | if C then S else S | assign\nC → E == E | E != E | E < E | E > E\nE → E + V | E - V | V\nV → id | num`,
+    sv:'if id == num then assign',si:'if then assign',
+    ex:[{t:'if id == num then assign',v:1},{t:'if id != num then assign else assign',v:1},{t:'assign',v:1},{t:'if == id then assign',v:0},{t:'if id == num assign',v:0}]
+  }
+};
+
+let curLang='arithmetic';
+let curGram={};
+
+window.onload=()=>{loadPreset('arithmetic');renderGram();updGramSidebar()};
+
+function go(tab){
+  document.querySelectorAll('.hdr-tab').forEach(t=>t.classList.remove('on'));
+  document.querySelectorAll('.page').forEach(p=>{p.classList.remove('on');p.style.display='none'});
+  document.querySelector(`[data-tab="${tab}"]`).classList.add('on');
+  document.getElementById(`p-${tab}`).classList.add('on');
+  document.getElementById(`p-${tab}`).style.display='flex';
+  if(tab==='grammar'){renderGram();updGramSidebar()}
+  if(tab==='parse'){initEx()}
+}
+
+function updHeader(){
+  const n=document.getElementById('langName').value.toUpperCase().slice(0,20);
+  document.getElementById('hdrLang').textContent=n;
+}
+
+function loadPreset(name){
+  curLang=name;
+  const p=PRESETS[name];
+  document.getElementById('langName').value=p.name;
+  document.getElementById('langType').value=p.type;
+  document.getElementById('langOps').value=p.ops;
+  document.getElementById('langDesc').value=p.desc;
+  document.getElementById('langNTs').value=p.nts;
+  document.getElementById('langStart').value=p.start;
+  document.getElementById('smplV').value=p.sv;
+  document.getElementById('smplI').value=p.si;
+  document.getElementById('gramText').value=p.gram;
+  document.querySelectorAll('.preset').forEach(el=>el.classList.remove('active'));
+  const idx={arithmetic:0,assignment:1,boolean:2,conditional:3}[name];
+  document.querySelectorAll('.preset')[idx].classList.add('active');
+  updHeader();
+  parseGramText(p.gram);
+  updStats();
+  renderGram();
+  updGramSidebar();
+  initEx();
+}
+
+function loadPresetByType(){loadPreset(document.getElementById('langType').value)}
+function genGrammar(){loadPreset(document.getElementById('langType').value);go('grammar')}
+
+function parseGramText(txt){
+  const lines=txt.trim().split('\n').filter(l=>l.trim());
+  const rules={};const nts=new Set();const ts=new Set();
+  lines.forEach(l=>{
+    const [lhs,rhs]=l.split('→').map(s=>s.trim());
+    if(!lhs||!rhs)return;
+    nts.add(lhs.trim());
+    const alts=rhs.split('|').map(a=>a.trim().split(/\s+/));
+    rules[lhs.trim()]=alts;
+  });
+  Object.values(rules).forEach(alts=>alts.forEach(syms=>syms.forEach(s=>{if(!nts.has(s)&&s!=='ε')ts.add(s)})));
+  curGram={rules,nts:[...nts],ts:[...ts],start:[...nts][0]};
+  return curGram;
+}
+
+function applyGram(){parseGramText(document.getElementById('gramText').value);renderGram();updGramSidebar();updStats()}
+function reformatGram(){
+  const txt=document.getElementById('gramText').value;
+  document.getElementById('gramText').value=txt.trim().split('\n').filter(l=>l.trim()).map(l=>{const p=l.split('→');return p.length<2?l:`${p[0].trim()} → ${p[1].trim()}`}).join('\n');
+  applyGram();
+}
+
+function renderGram(){
+  const txt=document.getElementById('gramText').value;
+  parseGramText(txt);
+  const lines=txt.trim().split('\n').filter(l=>l.trim());
+  const box=document.getElementById('renderedGram');
+  let cnt=0;
+  box.innerHTML=lines.map((line,i)=>{
+    const p=line.split('→');
+    if(p.length<2)return`<div><span class="gram-num">${i+1}</span>${esc(line)}</div>`;
+    const lhs=p[0].trim();const rhs=p[1].trim();cnt++;
+    return`<div><span class="gram-num">${i+1}</span><span class="gram-lhs">${lhs}</span> <span class="gram-arrow">→</span> ${colRhs(rhs,curGram.nts)}</div>`;
+  }).join('');
+  document.getElementById('prodCount').textContent=cnt+' rules';
+}
+
+function colRhs(rhs,nts){
+  return rhs.split(/(\s+|\||\(|\))/).map(tok=>{
+    if(tok==='|')return`<span class="gram-pipe">|</span>`;
+    if(tok==='ε')return`<span class="gram-eps">ε</span>`;
+    if(nts&&nts.includes(tok.trim())&&tok.trim())return`<span class="gram-nt">${tok}</span>`;
+    if(tok.trim()&&tok!==' ')return`<span class="gram-t">${esc(tok)}</span>`;
+    return tok;
+  }).join('');
+}
+
+function updStats(){
+  const nts=document.getElementById('langNTs').value.split(',').filter(x=>x.trim()).length;
+  const ops=document.getElementById('langOps').value.split(',').filter(x=>x.trim()).length;
+  parseGramText(document.getElementById('gramText').value);
+  const total=Object.values(curGram.rules||{}).reduce((a,b)=>a+b.length,0);
+  document.getElementById('sNT').textContent=nts;
+  document.getElementById('sProd').textContent=total;
+  document.getElementById('sT').textContent=curGram.ts?curGram.ts.length:0;
+  document.getElementById('sOps').textContent=ops;
+  function setChk(id,ok){
+    const el=document.getElementById(id);
+    el.className='check-item '+(ok?'check-ok':'check-fail');
+    el.querySelector('.check-icon').textContent=ok?'✓':'✕';
+  }
+  setChk('chk-nt',nts>=3);setChk('chk-prod',total>=5);setChk('chk-ops',ops>=2);
+  const hv=document.getElementById('smplV').value.trim().length>0;
+  const hi=document.getElementById('smplI').value.trim().length>0;
+  setChk('chk-ex',hv&&hi);
+  updPills();
+}
+
+function updPills(){
+  if(!curGram.nts)return;
+  function pill(t,col){return`<span style="border:1px solid ${col};color:${col};padding:2px 8px;font-size:9px;letter-spacing:1px;font-family:var(--body);text-transform:uppercase">${esc(t)}</span>`}
+  document.getElementById('ntPills').innerHTML=curGram.nts.map(n=>pill(n,'#0040ff')).join('');
+  document.getElementById('tPills').innerHTML=curGram.ts.map(t=>pill(t,'#00aa44')).join('');
+}
+
+function updGramSidebar(){
+  if(!curGram.nts)return;
+  function pill(t,col){return`<span style="border:1px solid ${col};color:${col};padding:2px 8px;font-size:9px;letter-spacing:1px;font-family:var(--body)">${esc(t)}</span>`}
+  document.getElementById('gNtPills').innerHTML=curGram.nts.map(n=>pill(n,'#0040ff')).join('');
+  document.getElementById('gTPills').innerHTML=curGram.ts.map(t=>pill(t,'#00aa44')).join('');
+  const totP=Object.values(curGram.rules||{}).reduce((a,b)=>a+b.length,0);
+  document.getElementById('gNT').textContent=curGram.nts.length;
+  document.getElementById('gProd').textContent=totP;
+  document.getElementById('gStart').textContent=curGram.start||'S';
+  const fs=document.getElementById('firstSets');
+  fs.innerHTML=curGram.nts.map(nt=>{
+    const alts=curGram.rules[nt]||[];
+    const f=new Set();
+    alts.forEach(syms=>{const s=syms[0];if(!curGram.nts.includes(s))f.add(s);else f.add(s+'*')});
+    return`<div><span style="color:#0040ff">FIRST(${nt})</span> = {${[...f].map(x=>x.endsWith('*')?`<span style="color:var(--amber)">${x}</span>`:`<span style="color:var(--green)">${esc(x)}</span>`).join(', ')}}</div>`;
+  }).join('');
+}
+
+// ===== TOKENIZER =====
+function tokenize(inp){
+  const toks=[];let s=inp.trim();
+  const pats=[
+    ['whitespace',/^\s+/],['number',/^\d+(\.\d+)?/],
+    ['keyword_true',/^true\b/],['keyword_false',/^false\b/],
+    ['keyword_not',/^not\b/],['keyword_and',/^and\b/],
+    ['keyword_or',/^or\b/],['keyword_if',/^if\b/],
+    ['keyword_then',/^then\b/],['keyword_else',/^else\b/],
+    ['keyword_assign',/^assign\b/],
+    ['id',/^[a-zA-Z_][a-zA-Z0-9_]*/],
+    ['op_eq',/^==/],['op_ne',/^!=/],['op_le',/^<=/],['op_ge',/^>=/],
+    ['op_lt',/^</],['op_gt',/^>/],['assign',/^=/],
+    ['plus',/^\+/],['minus',/^-/],['star',/^\*/],['slash',/^\//],
+    ['lparen',/^\(/],['rparen',/^\)/],
+  ];
+  while(s.length>0){
+    if(/^\s/.test(s)){s=s.replace(/^\s+/,'');continue}
+    let matched=false;
+    for(const[name,pat]of pats){
+      if(name==='whitespace')continue;
+      const m=s.match(pat);
+      if(m){
+        const val=m[0];
+        let type=name.startsWith('keyword')?'KEYWORD':name==='id'?'ID':name==='number'?'NUM':(name==='lparen'||name==='rparen')?'PAREN':'OP';
+        toks.push({type,name,val});s=s.slice(val.length);matched=true;break;
+      }
+    }
+    if(!matched){toks.push({type:'ERR',name:'error',val:s[0]});s=s.slice(1)}
+  }
+  toks.push({type:'EOF',name:'eof',val:'$'});
+  return toks;
+}
+
+// ===== PARSERS =====
+function parseArit(tokens){
+  let pos=0;const trace=[];let err=null;
+  const peek=()=>tokens[pos]||{type:'EOF',val:'$'};
+  const cons=()=>tokens[pos++];
+  function parseE(){
+    trace.push({rule:'E',prod:'E → T { (+|-) T }'});
+    let n={label:'E',children:[]};
+    let t=parseT();if(!t)return null;n.children.push(t);
+    while(peek().val==='+'||peek().val==='-'){
+      const op=cons();n.children.push({label:op.val,children:[],terminal:true});
+      const t2=parseT();if(!t2)return null;n.children.push(t2);
+    }
+    return n;
+  }
+  function parseT(){
+    trace.push({rule:'T',prod:'T → F { (*|/) F }'});
+    let n={label:'T',children:[]};
+    let f=parseF();if(!f)return null;n.children.push(f);
+    while(peek().val==='*'||peek().val==='/'){
+      const op=cons();n.children.push({label:op.val,children:[],terminal:true});
+      const f2=parseF();if(!f2)return null;n.children.push(f2);
+    }
+    return n;
+  }
+  function parseF(){
+    const t=peek();
+    if(t.val==='('){
+      trace.push({rule:'F',prod:'F → ( E )'});cons();
+      const n={label:'F',children:[{label:'(',children:[],terminal:true}]};
+      const e=parseE();if(!e)return null;n.children.push(e);
+      if(peek().val!==')'){err="Expected ')'";return null}
+      cons();n.children.push({label:')',children:[],terminal:true});return n;
+    }
+    if(t.type==='NUM'||t.type==='ID'){
+      trace.push({rule:'F',prod:`F → ${t.val}`});cons();
+      return{label:'F',children:[{label:t.val,children:[],terminal:true}]};
+    }
+    err=`Unexpected '${t.val}'`;return null;
+  }
+  const tree=parseE();
+  const valid=tree!==null&&peek().type==='EOF'&&!err;
+  if(!valid&&!err)err=`Unexpected '${peek().val}'`;
+  return{valid,tree,trace,error:err};
+}
+
+function parseAssign(tokens){
+  let pos=0;const trace=[];let err=null;
+  const peek=()=>tokens[pos]||{type:'EOF',val:'$'};
+  const cons=()=>tokens[pos++];
+  function parseS(){
+    trace.push({rule:'S',prod:'S → id = E'});
+    const t=peek();if(t.type!=='ID'){err=`Expected id, got '${t.val}'`;return null}
+    cons();const n={label:'S',children:[{label:t.val,children:[],terminal:true}]};
+    if(peek().val!=='='){err=`Expected '='`;return null}
+    cons();n.children.push({label:'=',children:[],terminal:true});
+    const e=parseE();if(!e)return null;n.children.push(e);return n;
+  }
+  function parseE(){
+    trace.push({rule:'E',prod:'E → T { (+|-) T }'});
+    let n={label:'E',children:[]};let f=parseT();if(!f)return null;n.children.push(f);
+    while(peek().val==='+'||peek().val==='-'){const op=cons();n.children.push({label:op.val,children:[],terminal:true});const f2=parseT();if(!f2)return null;n.children.push(f2)}
+    return n;
+  }
+  function parseT(){
+    trace.push({rule:'T',prod:'T → F { * F }'});
+    let n={label:'T',children:[]};let f=parseF();if(!f)return null;n.children.push(f);
+    while(peek().val==='*'){const op=cons();n.children.push({label:op.val,children:[],terminal:true});const f2=parseF();if(!f2)return null;n.children.push(f2)}
+    return n;
+  }
+  function parseF(){
+    const t=peek();
+    if(t.val==='('){cons();const n={label:'F',children:[{label:'(',children:[],terminal:true}]};const e=parseE();if(!e)return null;n.children.push(e);if(peek().val!==')'){err="Expected ')'";return null}cons();n.children.push({label:')',children:[],terminal:true});return n}
+    if(t.type==='ID'||t.type==='NUM'){cons();return{label:'F',children:[{label:t.val,children:[],terminal:true}]}}
+    err=`Expected id or num, got '${t.val}'`;return null;
+  }
+  const tree=parseS();const valid=tree!==null&&peek().type==='EOF'&&!err;
+  if(!valid&&!err)err=`Unexpected '${peek().val}'`;
+  return{valid,tree,trace,error:err};
+}
+
+function parseBool(tokens){
+  let pos=0;const trace=[];let err=null;
+  const peek=()=>tokens[pos]||{type:'EOF',val:'$'};
+  const cons=()=>tokens[pos++];
+  function parseB(){
+    trace.push({rule:'B',prod:'B → C { or C }'});
+    let n={label:'B',children:[]};let c=parseC();if(!c)return null;n.children.push(c);
+    while(peek().val==='or'){cons();n.children.push({label:'or',children:[],terminal:true});const c2=parseC();if(!c2)return null;n.children.push(c2)}
+    return n;
+  }
+  function parseC(){
+    trace.push({rule:'C',prod:'C → L { and L }'});
+    let n={label:'C',children:[]};let l=parseL();if(!l)return null;n.children.push(l);
+    while(peek().val==='and'){cons();n.children.push({label:'and',children:[],terminal:true});const l2=parseL();if(!l2)return null;n.children.push(l2)}
+    return n;
+  }
+  function parseL(){
+    const t=peek();
+    if(t.val==='not'){trace.push({rule:'L',prod:'L → not L'});cons();const n={label:'L',children:[{label:'not',children:[],terminal:true}]};const l=parseL();if(!l)return null;n.children.push(l);return n}
+    if(t.val==='('){cons();const n={label:'L',children:[{label:'(',children:[],terminal:true}]};const b=parseB();if(!b)return null;n.children.push(b);if(peek().val!==')'){err="Expected ')'";return null}cons();n.children.push({label:')',children:[],terminal:true});return n}
+    if(t.val==='true'||t.val==='false'||t.type==='ID'){trace.push({rule:'L',prod:`L → ${t.val}`});cons();return{label:'L',children:[{label:t.val,children:[],terminal:true}]}}
+    err=`Expected bool or id, got '${t.val}'`;return null;
+  }
+  const tree=parseB();const valid=tree!==null&&peek().type==='EOF'&&!err;
+  if(!valid&&!err)err=`Unexpected '${peek().val}'`;
+  return{valid,tree,trace,error:err};
+}
+
+function parseCond(tokens){
+  let pos=0;const trace=[];let err=null;
+  const peek=()=>tokens[pos]||{type:'EOF',val:'$'};
+  const cons=()=>tokens[pos++];
+  function parseS(){
+    const t=peek();
+    if(t.val==='if'){
+      trace.push({rule:'S',prod:'S → if C then S [else S]'});cons();
+      const n={label:'S',children:[{label:'if',children:[],terminal:true}]};
+      const c=parseC();if(!c)return null;n.children.push(c);
+      if(peek().val!=='then'){err="Expected 'then'";return null}
+      cons();n.children.push({label:'then',children:[],terminal:true});
+      const s=parseS();if(!s)return null;n.children.push(s);
+      if(peek().val==='else'){cons();n.children.push({label:'else',children:[],terminal:true});const s2=parseS();if(!s2)return null;n.children.push(s2)}
+      return n;
+    }
+    if(t.val==='assign'||t.type==='ID'){trace.push({rule:'S',prod:'S → assign'});cons();return{label:'S',children:[{label:t.val,children:[],terminal:true}]}}
+    err=`Expected 'if' or assign, got '${t.val}'`;return null;
+  }
+  function parseC(){
+    trace.push({rule:'C',prod:'C → E op E'});
+    const n={label:'C',children:[]};const e1=parseE();if(!e1)return null;n.children.push(e1);
+    const op=peek();
+    if(!['==','!=','<','>','<=','>='].includes(op.val)){err=`Expected comparison, got '${op.val}'`;return null}
+    cons();n.children.push({label:op.val,children:[],terminal:true});
+    const e2=parseE();if(!e2)return null;n.children.push(e2);return n;
+  }
+  function parseE(){
+    trace.push({rule:'E',prod:'E → V { (+|-) V }'});
+    let n={label:'E',children:[]};let v=parseV();if(!v)return null;n.children.push(v);
+    while(peek().val==='+'||peek().val==='-'){const op=cons();n.children.push({label:op.val,children:[],terminal:true});const v2=parseV();if(!v2)return null;n.children.push(v2)}
+    return n;
+  }
+  function parseV(){
+    const t=peek();
+    if(t.type==='ID'||t.type==='NUM'){trace.push({rule:'V',prod:`V → ${t.val}`});cons();return{label:'V',children:[{label:t.val,children:[],terminal:true}]}}
+    err=`Expected id/num, got '${t.val}'`;return null;
+  }
+  const tree=parseS();const valid=tree!==null&&peek().type==='EOF'&&!err;
+  if(!valid&&!err)err=`Unexpected '${peek().val}'`;
+  return{valid,tree,trace,error:err};
+}
+
+// ===== RUN =====
+function runParse(){
+  const inp=document.getElementById('codeInput').value.trim();
+  if(!inp)return;
+  const toks=tokenize(inp);
+  renderToks(toks.filter(t=>t.type!=='EOF'));
+  let res;
+  if(curLang==='arithmetic')res=parseArit(toks);
+  else if(curLang==='assignment')res=parseAssign(toks);
+  else if(curLang==='boolean')res=parseBool(toks);
+  else res=parseCond(toks);
+  const sw=document.getElementById('statusWrap');
+  sw.style.display='block';
+  const sb=document.getElementById('statusBox');
+  if(res.valid){
+    sb.className='status status-ok';
+    document.getElementById('statusBig').textContent='VALID';
+    document.getElementById('statusTxt').textContent='Input parsed successfully';
+    document.getElementById('statusSub').textContent='All production rules satisfied';
+  } else {
+    sb.className='status status-err';
+    document.getElementById('statusBig').textContent='INVALID';
+    document.getElementById('statusTxt').textContent='Parse failed';
+    document.getElementById('statusSub').textContent=res.error||'Syntax error';
+  }
+  renderTrace(res.trace,res.valid);
+  if(res.error){document.getElementById('errDiv').innerHTML=`<div style="background:#ffe0dc;border:1px solid #ffb0a0;padding:10px;font-family:var(--mono);font-size:11px;color:#aa1100">${esc(res.error)}</div>`}
+  else document.getElementById('errDiv').innerHTML='<p style="font-size:11px;color:var(--green)">✓ No errors.</p>';
+  if(res.tree)drawTree(res.tree);
+  else{
+    document.getElementById('treeSvg').innerHTML=`<text x="300" y="95" text-anchor="middle" font-family="Space Mono,monospace" font-size="12" fill="#cc2200">parse failed — no tree</text>`;
+    document.getElementById('treeSvg').setAttribute('viewBox','0 0 600 180');
+  }
+}
+
+function renderToks(toks){
+  document.getElementById('tokList').innerHTML=toks.map(t=>{
+    const cls=`tok-${t.type}`;
+    return`<div class="tok-row"><span class="tok-tag ${cls}">${t.type}</span><span class="tok-val">${esc(t.val)}</span></div>`;
+  }).join('');
+}
+
+function renderTrace(trace,valid){
+  const div=document.getElementById('traceList');
+  if(!trace||!trace.length){div.innerHTML='<p style="font-size:11px;color:var(--line3)">No trace.</p>';return}
+  div.innerHTML=trace.map((s,i)=>`
+    <div class="trace-item">
+      <span class="trace-n">${i+1}.</span>
+      <span class="trace-rule">${colTraceProd(s.prod)}</span>
+    </div>`).join('');
+}
+
+function colTraceProd(prod){
+  const p=prod.split('→');
+  if(p.length<2)return esc(prod);
+  return p[1].split(/(\s+)/).map(tok=>{
+    if(/^[A-Z]$/.test(tok))return`<span class="nt">${tok}</span>`;
+    if(/^[+\-*/()=<>!]+$/.test(tok)||['or','and','not','if','then','else'].includes(tok))return`<span style="color:var(--amber)">${esc(tok)}</span>`;
+    if(/^\d/.test(tok)||['true','false','id','num','assign'].includes(tok))return`<span class="t">${esc(tok)}</span>`;
+    return esc(tok);
+  }).join('');
+}
+
+// ===== TREE =====
+function drawTree(tree){
+  const NW=44,NH=26,LH=68;
+  function layout(n,d){
+    n._d=d;
+    if(!n.children||!n.children.length){n._w=NW;return}
+    n.children.forEach(c=>layout(c,d+1));
+    n._w=Math.max(NW,n.children.reduce((a,b)=>a+b._w+6,0)-6);
+  }
+  function assign(n,x){
+    n._x=x;let cx=x-n._w/2+(n.children&&n.children[0]?n.children[0]._w/2:0);
+    if(n.children)n.children.forEach(c=>{assign(c,cx+c._w/2);cx+=c._w+6});
+  }
+  function maxD(n){if(!n.children||!n.children.length)return n._d;return Math.max(...n.children.map(maxD))}
+  function collect(n,a){a.push(n);if(n.children)n.children.forEach(c=>collect(c,a));return a}
+  layout(tree,0);
+  const W=Math.max(600,tree._w+60);
+  assign(tree,W/2);
+  const D=maxD(tree);
+  const H=(D+1)*LH+50;
+  const nodes=collect(tree,[]);
+  let edges='',nds='';
+  nodes.forEach(n=>{
+    const x=n._x,y=n._d*LH+35;
+    if(n.children)n.children.forEach(c=>{
+      edges+=`<line x1="${x}" y1="${y+NH/2}" x2="${c._x}" y2="${c._d*LH+35-NH/2}" class="tree-edge"/>`;
+    });
+    const rc=n.terminal?'tree-t':'tree-nt';
+    const tc=n.terminal?'tree-lbl tree-lbl-t':'tree-lbl';
+    const lbl=n.label.length>6?n.label.slice(0,5)+'…':n.label;
+    nds+=`<g><rect x="${x-NW/2}" y="${y-NH/2}" width="${NW}" height="${NH}" rx="2" class="${rc}"/><text x="${x}" y="${y+4}" text-anchor="middle" class="${tc}">${esc(lbl)}</text></g>`;
+  });
+  const svg=document.getElementById('treeSvg');
+  svg.innerHTML=`<style>.tree-nt{fill:#dde8ff;stroke:#0040ff;stroke-width:1.5}.tree-t{fill:#d8f5e0;stroke:#00aa44;stroke-width:1.5}.tree-lbl{font-family:'Space Mono',monospace;font-size:11px;fill:#0a0a0f}.tree-lbl-t{fill:#005522}.tree-edge{stroke:#bbb;stroke-width:1}</style>`+edges+nds;
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);svg.style.height=H+'px';
+}
+
+// ===== EXAMPLES =====
+function initEx(){
+  const p=PRESETS[curLang];if(!p)return;
+  const exs=[{t:p.sv,v:1},{t:p.si,v:0},...(p.ex||[])];
+  document.getElementById('exList').innerHTML=exs.map(e=>`
+    <div class="ex-item" onclick="loadEx(${JSON.stringify(e.t)})">
+      <span class="ex-badge ${e.v?'ex-v':'ex-i'}">${e.v?'valid':'invalid'}</span>
+      ${esc(e.t)}
+    </div>`).join('');
+}
+
+function loadEx(t){document.getElementById('codeInput').value=t;document.getElementById('statusWrap').style.display='none';updCursor()}
+function testSample(){const p=PRESETS[curLang];if(p){document.getElementById('codeInput').value=p.sv;runParse()}}
+
+function clearAll(){
+  document.getElementById('codeInput').value='';
+  document.getElementById('statusWrap').style.display='none';
+  document.getElementById('tokList').innerHTML='';
+  document.getElementById('traceList').innerHTML='<p style="font-size:11px;color:var(--line3)">No trace yet.</p>';
+  document.getElementById('errDiv').innerHTML='<p style="font-size:11px;color:var(--line3)">No errors.</p>';
+  document.getElementById('treeSvg').innerHTML=`<text x="300" y="95" text-anchor="middle" font-family="Space Mono,monospace" font-size="12" fill="#aaa">run the parser to generate tree</text>`;
+  document.getElementById('treeSvg').setAttribute('viewBox','0 0 600 180');
+  document.getElementById('treeSvg').style.height='';
+  updCursor();
+}
+
+function updCursor(){
+  const v=document.getElementById('codeInput').value;
+  document.getElementById('cursorPos').textContent=v.length+' chars';
+}
+
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+
+// init
+document.querySelectorAll('.page').forEach(p=>p.style.display='none');
+document.getElementById('p-define').style.display='flex';
+updStats();
+</script>
+</body>
+</html>
